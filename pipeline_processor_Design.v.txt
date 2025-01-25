@@ -1,34 +1,28 @@
 module pipelined_processor (
     input wire clk,
     input wire rst,
-    input wire [7:0] instruction, // Instruction format: [7:6]=opcode, [5:4]=dst, [3:2]=src1, [1:0]=src2
-    output reg [7:0] result       // Result of the operation
+    input wire [7:0] instruction, 
+    output reg [7:0] result       
 );
 
-    // Instruction Fields
     localparam ADD = 2'b00;
     localparam SUB = 2'b01;
     localparam LOAD = 2'b10;
+    reg [7:0] if_id_instruction;  
+    reg [7:0] id_ex_instruction;
+    reg [7:0] ex_mem_result;     
+    reg [7:0] mem_wb_result;
 
-    // Pipeline Registers
-    reg [7:0] if_id_instruction;  // Instruction fetched in IF stage
-    reg [7:0] id_ex_instruction;  // Instruction decoded in ID stage
-    reg [7:0] ex_mem_result;      // Result from EX stage
-    reg [7:0] mem_wb_result;      // Result forwarded to WB stage
 
-    // Register File
-    reg [7:0] register_file [3:0]; // 4 general-purpose registers
+    reg [7:0] register_file [3:0];
 
-    // IF: Instruction Fetch
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             if_id_instruction <= 8'b0;
         end else begin
-            if_id_instruction <= instruction; // Fetch instruction
+            if_id_instruction <= instruction;
         end
     end
-
-    // ID: Instruction Decode
     reg [1:0] opcode;
     reg [1:0] dst, src1, src2;
     reg [7:0] op1, op2;
@@ -36,50 +30,42 @@ module pipelined_processor (
         if (rst) begin
             id_ex_instruction <= 8'b0;
         end else begin
-            id_ex_instruction <= if_id_instruction; // Pass instruction to the next stage
+            id_ex_instruction <= if_id_instruction;
             opcode <= if_id_instruction[7:6];
             dst <= if_id_instruction[5:4];
             src1 <= if_id_instruction[3:2];
             src2 <= if_id_instruction[1:0];
-
-            // Read operands from register file
             op1 <= register_file[src1];
             op2 <= register_file[src2];
         end
     end
-
-    // EX: Execute
     reg [7:0] alu_result;
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             ex_mem_result <= 8'b0;
         end else begin
             case (opcode)
-                ADD: alu_result <= op1 + op2; // Perform addition
-                SUB: alu_result <= op1 - op2; // Perform subtraction
-                LOAD: alu_result <= op1;      // Load value from src1
-                default: alu_result <= 8'b0;  // Default case
+                ADD: alu_result <= op1 + op2;
+                SUB: alu_result <= op1 - op2; 
+                LOAD: alu_result <= op1;     
+                default: alu_result <= 8'b0;
             endcase
-            ex_mem_result <= alu_result; // Pass result to the next stage
+            ex_mem_result <= alu_result;
         end
     end
-
-    // MEM: Memory Access (no memory used in this design, pass-through stage)
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             mem_wb_result <= 8'b0;
         end else begin
-            mem_wb_result <= ex_mem_result; // Pass result to the next stage
+            mem_wb_result <= ex_mem_result; 
         end
     end
-
-    // WB: Write Back
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             result <= 8'b0;
         end else begin
-            register_file[dst] <= mem_wb_result; // Write result back to destination register
-            result <= mem_wb_result; // Output the result
+            register_file[dst] <= mem_wb_result;
+            result <= mem_wb_result;
         end
     end
 
