@@ -1,0 +1,60 @@
+module pipelined_processor_tb;
+
+    // Parameters
+    reg clk;
+    reg rst;
+    reg [7:0] instruction;
+    wire [7:0] result;
+
+    // Instantiate the pipelined processor
+    pipelined_processor dut (
+        .clk(clk),
+        .rst(rst),
+        .instruction(instruction),
+        .result(result)
+    );
+  initial begin
+    $dumpfile ("dump.vcd");
+    $dumpvars(1);
+               end
+
+    // Clock generation
+    initial begin
+        clk = 0;
+        forever #5 clk = ~clk; // 10 time unit clock period
+    end
+
+    // Test procedure
+    initial begin
+        // Initialize and reset
+        rst = 1;
+        instruction = 8'b0;
+        #10;
+        rst = 0;
+
+        // Load initial values into registers (simulated via instructions)
+        // LOAD R0, R1 (R0 <- R1, Opcode: LOAD = 10, Dst: 00, Src1: 01)
+        instruction = 8'b10000100; // Load instruction
+        #10;
+
+        // ADD R2 = R0 + R1 (Opcode: ADD = 00, Dst: 10, Src1: 00, Src2: 01)
+        instruction = 8'b00100101; // Add instruction
+        #10;
+
+        // SUB R3 = R2 - R1 (Opcode: SUB = 01, Dst: 11, Src1: 10, Src2: 01)
+        instruction = 8'b01101001; // Subtract instruction
+        #10;
+
+        // Load value directly into R1 (Opcode: LOAD = 10, Dst: 01, Src1: 00)
+        instruction = 8'b10000100; // Load instruction
+        #10;
+
+        // Observe the results
+        #50;
+        $display("Final Result: %h", result);
+
+        // End simulation
+        $stop;
+    end
+
+endmodule
